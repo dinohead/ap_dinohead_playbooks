@@ -9,7 +9,7 @@
   tags: [ spawn ]
 
 - name: ROLE | Apply roles
-  hosts: ["{{ variable_host }}:&yum-server"]
+  hosts: ["{{ variable_host }}:&yum_server"]
   gather_facts: true
   roles:
     - role: ar_el_yum_server

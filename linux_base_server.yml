@@ -13,7 +13,7 @@
       tags: [ ar_vmware_instance, spawn ]
 
 - name: PLAY | Configure yum sources
-  hosts: ["{{ variable_host }}:!yum-server"]
+  hosts: ["{{ variable_host }}:!yum_server"]
   gather_facts: true
   vars: 
     ansible_python_interpreter: python3
@@ -31,8 +31,15 @@
     - role: ar_linux_resolvconf
       tags: [ ar_linux_resolvconf ]
 
-    - role: ar_linux_ntp_client
-      tags: [ ar_linux_ntp_client ]
+    - role: ar_linux_chrony_client
+      tags: [ ar_linux_chrony_client ]
 
     - role: ar_linux_update
       tags: [ ar_linux_update ]
+
+  tasks:
+
+    - name: COMMAND | Set the time to UTC
+      become: true
+      become_user: root
+      command: 'timedatectl set-timezone UTC'

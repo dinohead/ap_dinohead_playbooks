@@ -11,8 +11,8 @@
   hosts: ["{{ variable_host }}"]
   gather_facts: true
   roles:
-  # - role: ar_linux_gnome_desktop
-  #   tags: [ ar_linux_gnome_desktop ]
+  - role: ar_linux_gnome_desktop
+    tags: [ ar_linux_gnome_desktop ]
 
   - role: ar_linux_xrdp
     tags: [ ar_linux_xrdp ]
@@ -22,21 +22,49 @@
   gather_facts: true
   tasks:
 
-  - name: YUM | Install Packages
+  - name: YUM | Install Packages on 7
     become: true
     become_user: root
     yum:
       name: "{{ development_host_packages }}"
       state: present
       update_cache: yes
+    vars:
+      ansible_python_interpreter: /usr/bin/python
+    when: 
+      - "ansible_distribution_major_version | int <= 7"
 
-  - name: YUM | Update cache and all packages
+  - name: YUM | Install Packages on 8
+    become: true
+    become_user: root
+    yum:
+      name: "{{ development_host_packages }}"
+      state: present
+      update_cache: yes
+    when: 
+      - "ansible_distribution_major_version | int > 7"
+
+  - name: YUM | Update cache and all packages on 7
     become: true
     become_user: root
     yum:
       name: '*'
       state: latest
       update_cache: true
+    vars:
+      ansible_python_interpreter: /usr/bin/python
+    when: 
+      - "ansible_distribution_major_version | int <= 7"
+
+  - name: YUM | Update cache and all packages on 8
+    become: true
+    become_user: root
+    yum:
+      name: '*'
+      state: latest
+      update_cache: true
+    when: 
+      - "ansible_distribution_major_version | int > 7"
 
   - name: GROUP | Add samba group
     become: true
@@ -70,13 +98,13 @@
 
 # TO DO: Fix VS Code large workspace: https://code.visualstudio.com/docs/setup/linux
 
-# - name: PLAY | Apply roles for Developer user
-#   hosts: ["{{ variable_host }}"]
-#   gather_facts: true
-#   become: true
-#   become_user: "{{ host_developer_name }}"
-#   roles:
+- name: PLAY | Apply roles for Developer user
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  become: true
+  become_user: "{{ host_developer_name }}"
+  roles:
 
-#   - role: ar_linux_customize_gnome
-#     linux_customize_gnome_user: "{{ host_developer_name }}"
-#     when: host_developer_name is defined and host_developer_password is defined
+  - role: ar_linux_customize_gnome
+    linux_customize_gnome_user: "{{ host_developer_name }}"
+    when: host_developer_name is defined and host_developer_password is defined
