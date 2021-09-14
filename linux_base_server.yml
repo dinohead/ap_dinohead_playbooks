@@ -1,0 +1,38 @@
+---
+
+- name: Perform validation and inital setup
+  import_playbook: setup.yml
+  tags: [ setup ]
+
+- name: PLAY | Ensure vmware machines exist
+  hosts: ["{{ variable_host }}"]
+  gather_facts: false
+#  connection: local
+  roles:
+    - role: ar_vmware_instance
+      tags: [ ar_vmware_instance, spawn ]
+
+- name: PLAY | Configure yum sources
+  hosts: ["{{ variable_host }}:!yum-server"]
+  gather_facts: true
+  vars: 
+    ansible_python_interpreter: python3
+  roles:
+    - role: ar_linux_package_sources
+      tags: [ ar_linux_package_sources ]
+
+- name: PLAY | Gather facts and apply roles to hosts
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  roles:
+    - role: ar_linux_hostname
+      tags: [ ar_linux_hostname ]
+
+    - role: ar_linux_resolvconf
+      tags: [ ar_linux_resolvconf ]
+
+    - role: ar_linux_ntp_client
+      tags: [ ar_linux_ntp_client ]
+
+    - role: ar_linux_update
+      tags: [ ar_linux_update ]

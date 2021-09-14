@@ -1,0 +1,82 @@
+---
+- name: Perform validation and inital setup
+  import_playbook: setup.yml
+  tags: [ setup ]
+
+- name: Ensure the base VM server exists
+  import_playbook: linux_base_server.yml
+  tags: [ spawn ]
+
+- name: PLAY | Apply development host roles
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  roles:
+  # - role: ar_linux_gnome_desktop
+  #   tags: [ ar_linux_gnome_desktop ]
+
+  - role: ar_linux_xrdp
+    tags: [ ar_linux_xrdp ]
+
+- name: PLAY | Create Developer User
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  tasks:
+
+  - name: YUM | Install Packages
+    become: true
+    become_user: root
+    yum:
+      name: "{{ development_host_packages }}"
+      state: present
+      update_cache: yes
+
+  - name: YUM | Update cache and all packages
+    become: true
+    become_user: root
+    yum:
+      name: '*'
+      state: latest
+      update_cache: true
+
+  - name: GROUP | Add samba group
+    become: true
+    become_user: root
+    group:
+      name: samba
+      gid: 2473
+      state: present
+    when: host_developer_name is defined and host_developer_password is defined
+
+  - name: USER | Create user
+    become: true
+    become_user: root
+    user:
+      name: "{{ host_developer_name }}"
+      password: "{{ host_developer_password }}"
+      shell: /bin/bash
+      groups: samba
+      append: true
+      generate_ssh_key: true
+    when: host_developer_name is defined and host_developer_password is defined
+
+  - name: LINEINFILE | Add passwordless ssh for user
+    become: true
+    become_user: root
+    lineinfile:
+      path: /etc/sudoers
+      line: '%{{ host_developer_name }}  ALL=(ALL) NOPASSWD: ALL'
+      state: present
+    when: host_developer_name is defined and host_developer_password is defined
+
+# TO DO: Fix VS Code large workspace: https://code.visualstudio.com/docs/setup/linux
+
+# - name: PLAY | Apply roles for Developer user
+#   hosts: ["{{ variable_host }}"]
+#   gather_facts: true
+#   become: true
+#   become_user: "{{ host_developer_name }}"
+#   roles:
+
+#   - role: ar_linux_customize_gnome
+#     linux_customize_gnome_user: "{{ host_developer_name }}"
+#     when: host_developer_name is defined and host_developer_password is defined

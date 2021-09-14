@@ -1,0 +1,19 @@
+---
+
+- name: Perform validation and inital setup
+  hosts: [ localhost ]
+  gather_facts: false
+  tags: [ setup ]
+  roles:
+    - ansible-config_encoder_filters
+
+  tasks:
+    - name: Fail if variable_host is not defined
+      fail:
+        msg: |
+          You must define the variable; variable_host.
+          Example ansible-playbook -e variable_host=ansible01.grdn.pocnet.mil
+      when: variable_host is not defined
+
+    - set_fact:
+        ansible_python_interpreter: python3

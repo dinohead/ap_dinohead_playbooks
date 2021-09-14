@@ -1,0 +1,16 @@
+---
+
+- name: Perform validation and inital setup
+  import_playbook: setup.yml
+  tags: [ setup ]
+
+- name: Ensure the base VM server exists
+  import_playbook: linux_base_server.yml
+  tags: [ spawn ]
+
+- name: ROLE | Apply roles
+  hosts: ["{{ variable_host }}:&yum-server"]
+  gather_facts: true
+  roles:
+    - role: ar_el_yum_server
+      tags: [ ar_el_yum_server ]

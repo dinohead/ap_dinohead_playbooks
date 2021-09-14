@@ -1,0 +1,61 @@
+---
+- name: Perform validation and inital setup
+  import_playbook: setup.yml
+  tags: [ setup ]
+
+- name: Ensure the base VM server exists
+  import_playbook: linux_base_server.yml
+  tags: [ spawn ]
+
+- name: PLAY | Install Docker
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  vars: 
+    ansible_python_interpreter: python3
+  tasks:
+
+    - name: YUM | Install Docker on 7
+      become: true
+      become_user: root
+      yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose
+        state: present
+        update_cache: true
+        disable_gpg_check: true
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      when:
+        - "ansible_distribution_major_version | int <= 7"  
+
+    - name: YUM | Install Docker on 8
+      become: true
+      become_user: root
+      yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+ #
+ 
+ 
+ 
+ 
+ 
+          - docker-compose
+        state: present
+        update_cache: true
+        disable_gpg_check: true
+      when:
+        - "ansible_distribution_major_version | int > 7" 
+
+    - name: SYSTEMD | Start and enable docker
+      become: true
+      become_user: root
+      systemd:
+        name: docker
+        state: started
+        enabled: true
