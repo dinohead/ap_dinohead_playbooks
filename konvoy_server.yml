@@ -1,7 +1,7 @@
 ---
 
 - name: Create Server and install docker
-  import_playbook: docker_host.yml
+  import_playbook: linux_base_server.yml
   tags: [ spawn ]
 
 - name: ROLE | Configure Hosts for Konvoy
