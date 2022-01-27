@@ -4,18 +4,108 @@
   import_playbook: linux_base_server.yml
   tags: [ spawn ]
 
-- name: ROLE | Configure Hosts for Konvoy
+- name: Configure Konvoy Host
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  tasks:
+    - name: YUM | Remove Docker and friends on 7
+      become: true
+      become_user: root
+      yum:
+        name:
+          - docker
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - python-docker-py
+          - podman
+        state: absent
+        update_cache: yes
+      tags: [ remove_docker]
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      when:
+        - "ansible_distribution_major_version | int <= 7"
+
+    - name: YUM | Remove Docker and friends on 8
+      become: true
+      become_user: root
+      yum:
+        name:
+          - docker
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - python-docker-py
+          - podman
+        state: absent
+        update_cache: yes
+      tags: [ remove_docker]
+      when:
+        - "ansible_distribution_major_version | int > 7"
+
+    - name: STAT | Check if firewall service exists
+      stat:
+        path: /usr/lib/systemd/system/firewalld.service
+      register: firewall
+
+    - name: SYSTEMD | Ensure firewalld is stopped and disabled
+      become: true
+      become_user: root
+      systemd:
+        name: firewalld
+        enabled: false
+        state: stopped
+        daemon_reload: true
+      when: firewall.stat.exists
+
+    - name: SELINUX | Ensure SELinux is in targeted mode
+      become: true
+      become_user: root
+      selinux:
+        policy: targeted
+        state: enforcing
+      register: selinux
+
+    - name: SHELL | reboot the system if required
+      become: true
+      become_user: root
+      shell: sleep 2 && shutdown -r now "Reboot for SELinux change"
+      async: 1
+      poll: 0
+      when: selinux.changed
+      register: selinux_reboot
+
+    - name: WAIT_FOR_CONNECTION | Wait for connection to be re-established
+      wait_for_connection:
+        delay: 30
+      when: selinux_reboot.changed
+
+    - name: SHELL | Turn swap off
+      become: true
+      become_user: root
+      shell: |
+        swapoff -a
+
+    - name: MOUNT | Turn swap off some more
+      become: true
+      become_user: root
+      mount:
+        name: swap
+        fstype: swap
+        state: absent
+
+- name: ROLE | Grow root filesystem
+  hosts: ["{{ variable_host }}"]
+  gather_facts: true
+  roles:
+    - role: ar_linux_add_partition
+      tags: [ ar_linux_add_partition ]
+      when: konvoy_server_partition
+
+- name: ROLE | Add Data Disks to Workers
   hosts: ["{{ variable_host }}:&worker"]
   gather_facts: true
-  vars: 
-    ansible_python_interpreter: python3
   roles:
     - role: ar_add_data_disk
       tags: [ ar_add_data_disk ]
-
-#TODO: Ensure system in targeted mode
-#TODO: Ensure swap off and references to in /etc/fstab removed
-#TODO: Ensure firewalld disabled
-
-#sudo systemctl stop firewalld && sudo systemctl disable firewalld
-#sudo swapoff -a
